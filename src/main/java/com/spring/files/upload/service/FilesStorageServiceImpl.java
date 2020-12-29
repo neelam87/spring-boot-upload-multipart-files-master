@@ -10,7 +10,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.springframework.stereotype.Service;
 import org.springframework.util.FileSystemUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -40,30 +46,36 @@ public class FilesStorageServiceImpl implements FilesStorageService {
 
 	@Override
 	public void save(MultipartFile file) {
+		List<String[]> recordList = new ArrayList<String[]>();
 		try {
 			Files.copy(file.getInputStream(), this.root.resolve(file.getOriginalFilename()));
-
-			CSVReader reader = new CSVReader(new InputStreamReader(file.getInputStream()), ',', '"', 0);
-
-			// Read CSV line by line and use the string array as you want
-			String[] nextLine;
-			List<String[]> recordList = new ArrayList<String[]>();
-			while ((nextLine = reader.readNext()) != null) {
-				if (nextLine != null) {
-					// Verifying the read data here
-					System.out.println(Arrays.toString(nextLine));
-					if (!nextLine[0].trim().isEmpty()) {
-						recordList.add(nextLine);
+			try (CSVReader reader = new CSVReader(new InputStreamReader(file.getInputStream()), ',', '"', 0)) {
+				// Read CSV line by line and use the string array 
+				String[] nextLine;
+				while ((nextLine = reader.readNext()) != null) {
+					if (nextLine != null) {
+						// Verifying the read data here
+						if (!nextLine[0].trim().isEmpty()) {
+							recordList.add(nextLine);
+						}
 					}
 				}
 			}
-			reader.close();
+
+			// validate primary key
+			Map<String, String[]> map = new LinkedHashMap<String, String[]>();
+			for (int i = 0; i < recordList.size(); i++) {
+				map.put(recordList.get(i)[0], recordList.get(i));
+			}
+
+			List<String[]> finalList = new ArrayList<String[]>(map.values());
 
 			File[] files = rootFilePath.listFiles();
 			FileWriter output = new FileWriter(files[0].getAbsolutePath());
 			try (CSVWriter write = new CSVWriter(output, CSVWriter.DEFAULT_SEPARATOR, CSVWriter.NO_QUOTE_CHARACTER,
 					CSVWriter.DEFAULT_ESCAPE_CHARACTER, CSVWriter.DEFAULT_LINE_END)) {
-				write.writeAll(recordList);
+
+				write.writeAll(finalList);
 			}
 
 		} catch (Exception e) {
@@ -107,26 +119,26 @@ public class FilesStorageServiceImpl implements FilesStorageService {
 		File[] files = rootFilePath.listFiles();
 
 		List<String[]> csvBody;
-			try (CSVReader reader = new CSVReader(new FileReader(files[0].getAbsolutePath()), ',')) {
-				csvBody = reader.readAll();	
-			} catch (Exception ex) {
-				throw new IOException(ex.getMessage());
+		try (CSVReader reader = new CSVReader(new FileReader(files[0].getAbsolutePath()), ',')) {
+			csvBody = reader.readAll();
+		} catch (Exception ex) {
+			throw new IOException(ex.getMessage());
+		}
+
+		// get CSV row column
+		for (int i = 1; i < csvBody.size(); i++) {
+			if (csvBody.get(i)[0].equals(key)) {
+				csvBody.remove(i);
+				break;
 			}
-			
-			// get CSV row column
-			for (int i = 1; i < csvBody.size(); i++) {
-				if (csvBody.get(i)[0].equals(key)) {
-					csvBody.remove(i);
-					break;
-				} 
-			}
-			
-			FileWriter fWriter = new FileWriter(files[0].getAbsolutePath());
-			try (CSVWriter writer = new CSVWriter(fWriter)) {
-				writer.writeAll(csvBody);
-			} catch (IOException ex) {
-				throw new IOException("Corrupted file: " + ex.getMessage());
-			}
+		}
+
+		FileWriter fWriter = new FileWriter(files[0].getAbsolutePath());
+		try (CSVWriter writer = new CSVWriter(fWriter)) {
+			writer.writeAll(csvBody);
+		} catch (IOException ex) {
+			throw new IOException("Corrupted file: " + ex.getMessage());
+		}
 		return csvBody;
 
 	}
