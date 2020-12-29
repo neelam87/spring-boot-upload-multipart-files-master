@@ -3,12 +3,14 @@ package com.spring.files.upload.controller;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,8 +23,6 @@ import com.spring.files.upload.service.FilesStorageService;
 @Controller
 @CrossOrigin("http://localhost:8081")
 public class FilesController {
-	
-	
 
 	@Autowired
 	FilesStorageService storageService;
@@ -47,7 +47,7 @@ public class FilesController {
 				.body(storageService.getRecordByKey(key));
 	}
 
-	@GetMapping("/deleteRecord/{key}")
+	@DeleteMapping("/deleteRecord/{key}")
 	public ResponseEntity<List<String[]>> deleteFile(@PathVariable String key) throws IOException {
 		return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION)
 				.body(storageService.deleteRecordByKey(key));
