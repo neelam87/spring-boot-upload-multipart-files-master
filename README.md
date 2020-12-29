@@ -28,6 +28,6 @@ Run the spring boot rest api as java application:
 2) http://localhost:8080/getRecord/{key} 
    Its GET type endpoint, where user can get the record from text file based on primary key 
    
-3) http://localhost:8080/deleteRecord/1
+3) http://localhost:8080/deleteRecord/{key}
    Its DELETE type endpoint, where user can delete the record from text file based on primary key 
 
